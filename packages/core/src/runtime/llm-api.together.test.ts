@@ -157,6 +157,21 @@ describe("Together AI provider selection", () => {
     expect(child.resolvedModel()).toBe("deepseek-ai/DeepSeek-V4.1-Flash");
   });
 
+  it("lists only priced chat models unless TOGETHER_MODEL_LIST=all", async () => {
+    const catalog = [
+      { id: "synthetic-org/Priced-Runtime-9B", type: "chat", context_length: 32768, pricing: { input: 0.1, output: 0.2 } },
+      { id: "synthetic-org/Unpriced-Runtime-9B", type: "chat", context_length: 32768, pricing: { input: 0, output: 0 } },
+    ];
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockImplementation(async () => Response.json(catalog)));
+    expect((await runtime().availableModelCatalog()).map(model => model.id)).toEqual(["synthetic-org/Priced-Runtime-9B"]);
+    for (const value of ["all", " ALL "]) {
+      expect((await runtime("openai/gpt-oss-120b", { TOGETHER_MODEL_LIST: value }).availableModelCatalog()).map(model => model.id))
+        .toEqual(["synthetic-org/Priced-Runtime-9B", "synthetic-org/Unpriced-Runtime-9B"]);
+    }
+    expect((await runtime("openai/gpt-oss-120b", { TOGETHER_MODEL_LIST: "priced" }).availableModelCatalog()).map(model => model.id))
+      .toEqual(["synthetic-org/Priced-Runtime-9B"]);
+  });
+
   it("names the provider in missing-credential guidance", async () => {
     const fetchMock = vi.fn<typeof fetch>();
     vi.stubGlobal("fetch", fetchMock);
