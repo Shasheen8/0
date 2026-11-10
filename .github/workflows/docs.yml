@@ -44,17 +44,23 @@ jobs:
         run: node scripts/check-docs-site.mjs --write-marker
       # Resolve the existing project by its public domain, then publish to
       # its production branch. Do not silently create an unattached project.
+      # Publishing needs the upstream Cloudflare secret and public site, so the
+      # steps below run only in the canonical repository; forks still build and
+      # check the docs above.
       - name: Resolve public docs Pages project
+        if: github.repository == '0sec-labs/0'
         id: docs-project
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: e84b55c82d29ff76b789af0aea3d9121
         run: node scripts/diagnose-docs-routing.mjs
       - name: Deploy to Cloudflare Pages
+        if: github.repository == '0sec-labs/0'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: e84b55c82d29ff76b789af0aea3d9121
         run: |
           npx --yes wrangler@4 pages deploy docs/dist --project-name="${{ steps.docs-project.outputs.project_name }}" --branch="${{ steps.docs-project.outputs.production_branch }}"
       - name: Verify public documentation deployment
+        if: github.repository == '0sec-labs/0'
         run: node scripts/check-docs-site.mjs --live
