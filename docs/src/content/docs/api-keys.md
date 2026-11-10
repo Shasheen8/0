@@ -145,6 +145,9 @@ account: a priced model can still be unavailable on serverless (Together
 returns `model_not_available` and asks for a dedicated endpoint). Any model ID
 you can call works even when it is not listed, including your own dedicated
 endpoints and fine-tunes. Choose one explicitly with `--model` or `ZERO_MODEL`.
+Set `TOGETHER_MODEL_LIST=all` to list every `chat` model your key can see,
+including unpriced dedicated-only models and account-owned deployments. The
+list can be thousands of entries long, so search by exact ID.
 
 0 sends no Together-specific parameters. `reasoning_effort` is sent only when
 you set it, and Together honours it only on GPT-OSS models. Agent workflows need
