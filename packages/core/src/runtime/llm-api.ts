@@ -1,3 +1,4 @@
+import { isOpenCodeGoEndpoint, publishedOpenCodeGoContext } from "./opencode-go.js";
 import { captureSiwcConnection, listSiwcModels, siwcHeaders, type SiwcConnection } from "./siwc-connection.js";
 import type {
   Runtime,
@@ -2766,7 +2767,8 @@ export class LlmApiRuntime implements Runtime, NativeRuntime {
           }
         }
       }
-      const model = normalizeModelForProvider(provider, requestedModel);
+      // Inherited IDs are already native provider IDs, not routing selections.
+      const model = modelChanged ? normalizeModelForProvider(provider, requestedModel) : inherited.model;
       this.config = {
         type: "api",
         model,
@@ -3346,7 +3348,7 @@ export class LlmApiRuntime implements Runtime, NativeRuntime {
     if (typeof selectedModel !== "string" || !selectedModel.trim()) {
       throw new Error("Subagent model must be a non-empty model ID");
     }
-    const model = normalizeModelForProvider(this.provider, selectedModel);
+    const model = selectedModel === this.model ? this.model : normalizeModelForProvider(this.provider, selectedModel);
     // Operator-approved allowlist: the parent's own model, or any FIXED pin in
     // agentModels (the "auto" sentinel is not a real pin, so it is excluded).
     const approvedByAllowlist = model === this.model || Object.values(this.config.agentModels ?? {}).some(
@@ -3363,7 +3365,9 @@ export class LlmApiRuntime implements Runtime, NativeRuntime {
           : `Subagent model "${selectedModel}" is not operator-approved. Configure agentModels before selecting it.`,
       );
     }
-    const child = new LlmApiRuntime({ type: "api", timeout: timeoutMs, model }, this);
+    // Pass the selection, not its normalized comparison key: the inherited
+    // constructor normalizes changed selections once. Unchanged native IDs stay intact.
+    const child = new LlmApiRuntime({ type: "api", timeout: timeoutMs, model: selectedModel }, this);
     return child;
   }
 
@@ -3444,6 +3448,13 @@ export class LlmApiRuntime implements Runtime, NativeRuntime {
    */
   private get isGeminiCodeAssist(): boolean {
     return this.provider === "google";
+  }
+
+  /** Published Go metadata only; no discovery, credential refresh, or capacity probe. */
+  publishedContextWindowTokens(): number | undefined {
+    if (this.provider !== "openai" && this.provider !== "opencode") return undefined;
+    try { return publishedOpenCodeGoContext(new URL(this.baseUrl), this.model); }
+    catch { return undefined; }
   }
 
   /**
@@ -3575,8 +3586,7 @@ export class LlmApiRuntime implements Runtime, NativeRuntime {
     // protocol headers by the actual destination, never a provider display name.
     // https://opencode.ai/docs/console/harnesses#sessions
     const destination = new URL(this.baseUrl);
-    if (destination.origin === "https://opencode.ai" && !destination.username && !destination.password &&
-        /^\/(?:inference\/go\/(?:openai\/v1|anthropic\/v1|google\/v1beta)|zen\/go\/v1)(?:\/|$)/.test(destination.pathname)) {
+    if (isOpenCodeGoEndpoint(destination)) {
       base["x-opencode-session"] = this.opencodeConversationId;
       base["User-Agent"] = `0/${VERSION}`;
     }

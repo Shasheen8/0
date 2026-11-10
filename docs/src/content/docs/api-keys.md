@@ -118,7 +118,9 @@ Create a key at **api.together.ai → Settings → API Keys**, then connect
 **Together AI** in the console's Connections screen or export `TOGETHER_API_KEY`.
 Inference uses Together's OpenAI-compatible Chat Completions endpoint at
 `https://api.together.ai/v1`. Set `TOGETHER_BASE_URL` to change it, for example
-to the US-only endpoint `https://us-api.together.ai/v1`. Together's own SDKs
+to the US-only endpoint `https://us-api.together.ai/v1`. Together charges 1.25×
+standard input, cached-input, and output rates there; 0's catalog estimates do not
+include this endpoint surcharge. Together's own SDKs
 use the bare origin (`https://api.together.ai`), so an override with no path
 gets `/v1` appended; any explicit path is used as written.
 
@@ -139,15 +141,18 @@ env ZERO_SELECTED_PROVIDER=together ZERO_MODEL=openai/gpt-oss-120b \
 The prefix is removed once, so an ID that itself begins with `together/` is
 written `together/together/<model>`. The default model is `openai/gpt-oss-120b`.
 
-The model picker lists Together's `chat` models that publish a per-token price.
+The model picker lists Together's `chat` models that publish valid input and output token prices,
+including zero-priced models.
 That is Together's public catalog, so rows are marked as unverified for your
 account: a priced model can still be unavailable on serverless (Together
 returns `model_not_available` and asks for a dedicated endpoint). Any model ID
 you can call works even when it is not listed, including your own dedicated
 endpoints and fine-tunes. Choose one explicitly with `--model` or `ZERO_MODEL`.
 Set `TOGETHER_MODEL_LIST=all` to list every `chat` model your key can see,
-including unpriced dedicated-only models and account-owned deployments. The
-list can be thousands of entries long, so search by exact ID.
+including rows with no valid published price. The list can be thousands of
+entries long, so search by exact ID. Cost estimates use a published price only
+when it is positive; a model priced at zero or with no price keeps 0's
+conservative default estimate.
 
 0 sends no Together-specific parameters. `reasoning_effort` is sent only when
 you set it, and Together honours it only on GPT-OSS models. Agent workflows need

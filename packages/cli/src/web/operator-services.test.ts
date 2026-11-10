@@ -59,6 +59,30 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllEnvs(); rmSync(testHome, { recursive: true, force: true }); });
 
 describe("web model connection inspection", () => {
+  it("uses captured Go context metadata for the active display without discovery and preserves an explicit limit", async () => {
+    const { captureWebConsoleRuntimeBootstrap, createWebConsoleRuntimeFromBootstrap } = await import("./operator-services.js");
+    const runtime = new LlmApiRuntime({ type: "api", timeout: 120_000, provider: "openai", model: "deepseek-v4.1-flash", env: {
+      OPENAI_API_KEY: "synthetic-go-key", OPENAI_BASE_URL: "https://opencode.ai/inference/go/openai/v1", OPENAI_WIRE_API: "chat_completions", ZERO_LLM_FALLBACK: "",
+    } });
+    const discover = vi.spyOn(runtime, "availableModelCatalog");
+    vi.stubEnv("OPENAI_BASE_URL", "https://other.example/v1");
+    expect(describeWebConsoleRuntime(runtime).contextWindowTokens).toBe(1_000_000);
+    expect(discover).not.toHaveBeenCalled();
+    const bootstrap = captureWebConsoleRuntimeBootstrap(runtime);
+    bootstrap.contextWindowTokens = 64_000;
+    const restored = createWebConsoleRuntimeFromBootstrap(bootstrap);
+    expect(restored.info.contextWindowTokens).toBe(64_000);
+    expect(describeWebConsoleRuntime(restored.runtime).contextWindowTokens).toBe(64_000);
+  });
+
+  it("does not apply Go active-display metadata to another custom endpoint", () => {
+    const runtime = new LlmApiRuntime({ type: "api", timeout: 120_000, provider: "openai", model: "deepseek-v4.1-flash", env: {
+      OPENAI_API_KEY: "synthetic-other-key", OPENAI_BASE_URL: "https://other.example/v1", OPENAI_WIRE_API: "chat_completions", ZERO_LLM_FALLBACK: "",
+    } });
+    expect(runtime.publishedContextWindowTokens()).toBeUndefined();
+    expect(describeWebConsoleRuntime(runtime).contextWindowTokens).toBe(128_000);
+  });
+
   it("returns account rows while metadata refresh hangs, with one refresh per service", async () => {
     vi.mocked(syncModelCatalog).mockImplementation(() => new Promise(() => {}));
     const service = new WebOperatorServices();
@@ -124,6 +148,46 @@ describe("web model connection inspection", () => {
     const result = await new WebOperatorServices().handle("/api/console/providers", "GET", undefined, new URLSearchParams());
     const data = result?.data as { providers: Array<{ id: string; configured: boolean; diagnostics: { valid: boolean; message: string | null } }> };
     expect(data.providers.find((provider) => provider.id === "openai")).toMatchObject({ label: "OpenAI / Custom AI Provider", configured: true, diagnostics: { valid: true, message: null } });
+  });
+
+  it("scopes provider catalogs to opaque credentials and endpoint identity without leaking secrets", async () => {
+    const service = new WebOperatorServices();
+    const read = async () => {
+      const result = await service.handle("/api/console/providers", "GET", undefined, new URLSearchParams());
+      const data = result?.data as { providers: Array<{ id: string; connectionIdentity: string | null }> };
+      expect(JSON.stringify(data)).not.toContain("synthetic-openai-key");
+      return data.providers.find(provider => provider.id === "openai")!.connectionIdentity;
+    };
+    const original = await read();
+    expect(original).toMatch(/^[a-f0-9]{64}$/);
+    expect(await read()).toBe(original);
+    vi.stubEnv("OPENAI_API_KEY", "synthetic-replacement-key");
+    const replaced = await read();
+    expect(replaced).not.toBe(original);
+    vi.stubEnv("OPENAI_BASE_URL", "https://gateway.fixture/custom/v1");
+    expect(await read()).not.toBe(replaced);
+    vi.stubEnv("OPENAI_API_KEY", "");
+    expect(await read()).toBeNull();
+  });
+
+  it("rejects a stale connection identity before model discovery or public catalog synchronization", async () => {
+    const service = new WebOperatorServices();
+    const metadata = await service.handle("/api/console/providers", "GET", undefined, new URLSearchParams());
+    const { connectionIdentity } = (metadata!.data as { providers: Array<{ id: string; connectionIdentity: string }> }).providers.find(provider => provider.id === "openai")!;
+    vi.stubEnv("OPENAI_API_KEY", "synthetic-new-account-key");
+    vi.mocked(LlmApiRuntime.prototype.availableModelCatalog).mockClear();
+    const rejected = await service.handle("/api/console/models", "GET", undefined, new URLSearchParams({ providerId: "openai", expectedConnectionIdentity: connectionIdentity }));
+    expect(rejected).toMatchObject({ status: 409, data: { code: "model_connection_changed", error: "The model connection changed. Refresh Connections and try again." } });
+    expect(LlmApiRuntime.prototype.availableModelCatalog).not.toHaveBeenCalled();
+    expect(syncModelCatalog).not.toHaveBeenCalled();
+    expect(JSON.stringify(rejected)).not.toContain("synthetic-new-account-key");
+    const refreshed = await service.handle("/api/console/providers", "GET", undefined, new URLSearchParams());
+    const current = (refreshed!.data as { providers: Array<{ id: string; connectionIdentity: string }> }).providers.find(provider => provider.id === "openai")!.connectionIdentity;
+    expect(current).not.toBe(connectionIdentity);
+    expect((await service.handle("/api/console/models", "GET", undefined, new URLSearchParams({ providerId: "openai", expectedConnectionIdentity: current })))?.status).toBe(200);
+    // Older scoped callers and the global picker retain the existing contract.
+    expect((await service.handle("/api/console/models", "GET", undefined, new URLSearchParams({ providerId: "openai" })))?.status).toBe(200);
+    expect((await service.handle("/api/console/models", "GET", undefined, new URLSearchParams()))?.status).toBe(200);
   });
 
   it("explains an expired Codex model-discovery login without exposing its provider error body", async () => {
