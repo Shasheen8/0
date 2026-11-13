@@ -9,7 +9,7 @@
   </a>
 </p>
 
-<h1 align="center">The open-source AI security harness</h1>
+<h1 align="center">The open-source security OS</h1>
 
 <p align="center">
   <sub>Backed by</sub>
@@ -17,15 +17,15 @@
 </p>
 
 <p align="center">
-  Investigate vulnerabilities, review findings, and work on fixes in your browser.<br/>
-  Use your own model provider. Connect coding agents through CLI or MCP.
+  0.security brings your security tools and workflows together to find vulnerabilities,<br/>
+  develop fixes, and verify the results.
 </p>
 
 <p align="center">
   <a href="https://docs.0.security/"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/nav-docs-dark.svg"><img src="assets/readme/nav-docs-light.svg" alt="Documentation" height="48"></picture></a>
   <a href="https://0.security/research/"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/nav-research-dark.svg"><img src="assets/readme/nav-research-light.svg" alt="Security research" height="48"></picture></a>
   <a href="#run-0-locally"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/nav-install-dark.svg"><img src="assets/readme/nav-install-light.svg" alt="Install locally" height="48"></picture></a>
-  <a href="https://cloud.0.security/signup?provider=github"><picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/readme/cloud-button-static.svg"><img src="assets/readme/cloud-button.svg" alt="0cloud — sign up with GitHub" height="48"></picture></a>
+  <a href="https://0.security/enterprise/"><img src="assets/readme/enterprise-button.svg" alt="Enterprise" height="48"></a>
 </p>
 
 <p align="center">
@@ -50,33 +50,13 @@ https://github.com/user-attachments/assets/b0f0facd-a8bf-4642-91c7-31c0612e499e
 
 ## Get started
 
-Use **[0cloud](https://cloud.0.security/signup?provider=github)** for managed security reviews on your
-GitHub pull requests, or **[run 0 locally](#run-0-locally)** with your own model provider.
+Start with the **open-source CLI and local browser console** for security
+investigations, evaluations, reverse engineering, and CI workflows. Bring your
+own model provider; no platform account is required.
 
-### PR security reviews with 0cloud
-
-Connect your GitHub repositories to **0cloud**, the hosted service from 0.security.
-It checks pull requests with deterministic scanning and AI agents, runs targeted
-tests in a sandbox, and posts findings with evidence and suggested fixes.
-Review the findings and apply fixes from the same PR.
-
-<p align="center">
-  <a href="https://cloud.0.security/signup?provider=github">
-    <picture>
-      <source media="(max-width: 600px) and (prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="assets/readme/cloud-flow-mobile-dark-static.svg">
-      <source media="(max-width: 600px) and (prefers-reduced-motion: reduce)" srcset="assets/readme/cloud-flow-mobile-light-static.svg">
-      <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="assets/readme/cloud-flow-mobile-dark.svg">
-      <source media="(max-width: 600px)" srcset="assets/readme/cloud-flow-mobile-light.svg">
-      <source media="(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="assets/readme/cloud-flow-dark-static.svg">
-      <source media="(prefers-reduced-motion: reduce)" srcset="assets/readme/cloud-flow-light-static.svg">
-      <source media="(prefers-color-scheme: dark)" srcset="assets/readme/cloud-flow-dark.svg">
-      <img src="assets/readme/cloud-flow-light.svg" alt="0cloud: connect a pull request, investigate security issues, review and apply fixes" width="100%">
-    </picture>
-  </a>
-</p>
-
-**[Start with 0cloud →](https://cloud.0.security/signup?provider=github)** ·
-[How it works](https://0.security/) · [Pricing](https://0.security/pricing/)
+For organization-wide automation and use-case integrations, explore
+[Enterprise](https://0.security/enterprise/) or
+[book a demo](https://0.security/contact/?intent=enterprise).
 
 ### Run 0 locally
 
@@ -90,7 +70,7 @@ export PATH="$HOME/.0/bin:$PATH"
 
 `0` opens the local browser. In **Connections**, add a model provider or supported
 subscription, then choose a workspace and start a chat. Local use needs no
-0cloud account. Use the CLI or MCP for automation.
+platform account. Use the CLI or MCP for automation.
 
 [npm, Windows, source and Docker installation](https://docs.0.security/getting-started/) ·
 [Model connections](https://docs.0.security/api-keys/) ·
@@ -137,6 +117,14 @@ For automation and coding agents, the CLI exposes the same workflow runner:
 [Workflow guide](https://docs.0.security/workflow/) ·
 [Learning](https://docs.0.security/learning/) ·
 [GitHub Actions](https://docs.0.security/ci/github-action/)
+
+## CI/CD
+
+Run open-source security reviews in your own pipeline with explicit model access,
+cost limits, structured reports, and a severity gate. Preserve JSON and SARIF
+artifacts for review. See the [CI/CD guide](https://docs.0.security/ci/github-action/)
+for the reusable GitHub Action, commands for other runners, and
+`0 reports import` to review CI artifacts in a local browser workspace.
 
 ## Hosts and plugins
 
@@ -187,7 +175,9 @@ For AI agents: [product index](https://0.security/llms.txt) ·
 ## Development
 
 Install dependencies with `pnpm install`, run `npm run dev`, and open the printed
-browser address. The dashboard updates with hot reload.
+browser address. Frontend edits hot reload; backend edits restart the local server
+(and can interrupt active requests). Use `npm run dev -- --port 48141 --frontend-port 5175`
+for explicit ports; occupied defaults automatically select free ports.
 See [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
 For local binary analysis, run `npm run setup:0verse` once. It finds Ghidra and

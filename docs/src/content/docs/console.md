@@ -144,6 +144,14 @@ Mem0 server, vector database, embedding model, or a migration of existing chats.
 Raw transcripts remain in the private session store; source notes and their
 learning/evidence records keep their existing formats.
 
+## Action modes
+
+The browser offers **YOLO** (the default for new chats, without per-action
+approval prompts) and **Standard** (ask before actions). Switching to YOLO also
+resumes tool actions waiting for per-action approval. Scope and directory grants,
+workflow authorization, and questions remain separate decisions. Existing chats
+keep their saved setting until you change it.
+
 ## Non-interactive approval limitations
 
 Headless prompts have no interactive tool-approval surface. Requests requiring
@@ -278,8 +286,13 @@ turn in the same session. The chat shows the delay and offers a new chat or
 agent inspection; other sessions remain usable. Inspect retained state with
 `0 sessions show <id>` or `0 sessions events <id>`.
 
+Qualified Bun sessions on macOS/Linux expose `cancellation.forceStopAvailable`.
+Use `0 sessions force-stop <live-id>` to stop that session's owned process and
+registered resources while leaving the engine and other chats running. It
+preserves interrupted history without replaying the tool; completed external
+effects are not undone. Unconfirmed cleanup remains quarantined.
+
 Cancellation remains cooperative for local in-process operations that ignore
-their abort signal. There is no safe session-only force termination for an
-arbitrary in-process operation; restarting the engine also interrupts its
-other sessions. Isolated SmolVM turns retain their existing controller-stop
+their abort signal, including unsupported Node/WASM execution. These sessions
+do not advertise force stop. Isolated SmolVM turns retain their controller-stop
 path.
